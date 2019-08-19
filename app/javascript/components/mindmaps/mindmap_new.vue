@@ -2,16 +2,18 @@
   <div>
     <section id="map-container" class="map-container" @mousemove.prevent="doDrag">
       <div class="center">
-        <span @mousedown="startDrag" class="start_dot"></span>
-        <input type="text" v-model="mainIdea" class="central_idea"/>       
+        <input-field v-model="mainIdea" @start-drag="startDrag"></input-field>
       </div>
-      <canvas id="map-canvas" width="1200" height="1200"></canvas>
+      <canvas id="map-canvas" :width="windowWidth" height="1500"></canvas>
     </section>
   </div>
 </template>
 
 <script>
+  import InputField from './idea_input_field'
+
   export default {
+    components: {InputField},
     data() {
       return {
         mainIdea: "Central Idea",
@@ -21,45 +23,61 @@
         x: 0,
         y: 0,
         parentX: 0,
-        parentY: 0
+        parentY: 0,
+        windowWidth: window.innerWidth
       }
     },
     methods: {
       startDrag(event) {
-        this.dragging = true
-        this.parentX = event.clientX
-        this.parentY = event.clientY
-        var c=document.createElement('CANVAS')
-        c.id=this.parentX + "";
-        document.getElementById('map-container').appendChild(c)
-        c.style.position="absolute"
-        c.style.top=0
-        c.style.left=0
-        c.width = 1200//Math.abs(this.parentX, this.x)
-        c.height = 1200//Math.abs(this.parentY, this.y)
-        this.x = this.y = 0
+        this.dragging = true;
+        this.parentX = event.clientX;
+        this.parentY = event.clientY;
+        var c = document.createElement('CANVAS');
+        c.id = this.parentX + "";
+        document.getElementById('map-container').appendChild(c);
+        c.style.position="absolute";
+        c.style.top = 0;
+        c.style.left = 0;
+        c.width = this.windowWidth;
+        c.height = 1500;
+        this.x = this.y = 0;
       },
       stopDrag(event) {
         if (this.dragging) {
-          this.dragging = false
-          var node=document.createElement('DIV')
-          var input_node=document.createElement("INPUT");
+          this.dragging = false;
+
+          // To prevent adding new input box if user clicks on input circle.
+          if (this.x == 0 && this.y == 0) {return;}
+          console.log(this.x, this.y)
+          var node = document.createElement('DIV');
+          var input_node = document.createElement("INPUT");
           input_node.setAttribute("type", "text");
           input_node.value = "New Idea";
-          node.appendChild(input_node)
-          node.style.position = 'absolute'
-          node.style.left= this.x + "px"
-          node.style.top=this.y + "px"
-          document.getElementById('map-container').appendChild(node)
-          var parent = document.getElementsByClassName('center')[0]
-          this.connections.push({parentX: this.parentX, parentY: this.parentY, childX: this.x, childY: this.y})
-          this.x = this.y = 0
+          input_node.style.padding = '3% 5%';
+          input_node.style.border = '1px solid';
+          input_node.style.textAlign = 'center';
+          input_node.style.borderRadius = "11%";
+          input_node.style.fontWeight = "700";
+          input_node.style.fontSize = "80%";
+          node.appendChild(input_node);
+          node.style.position = 'absolute';
+          node.style.left = this.x + "px";
+          node.style.top = this.y + "px";
+          document.getElementById('map-container').appendChild(node);
+          var parent = document.getElementsByClassName('center')[0];
+          this.connections.push({
+            parentX: this.parentX, 
+            parentY: this.parentY, 
+            childX: this.x, 
+            childY: this.y
+          });
+          this.x = this.y = 0;
         }
       },
       doDrag(event) {
         if (this.dragging) {
-          this.x = event.clientX;
-          this.y = event.clientY;
+          this.x = event.clientX + 1;
+          this.y = event.clientY + 1;
 
           var c = document.getElementById(this.parentX + "")
           var ctx = c.getContext("2d");
@@ -103,36 +121,6 @@
 </script>
 
 <style scoped lang="scss">
-  .central_idea {
-    text-align: center;
-    padding: 5% 7%;
-    border: 1px solid;
-    border-radius: 11%;
-    font-weight: 900;
-    font-size: 100%;
-  }
-  .new_idea {
-    text-align: center;
-    padding: 3% 5%;
-    border: 1px solid;
-    border-radius: 11%;
-    font-weight: 700;
-    font-size: 80%;
-  }
-  .start_dot {
-    cursor: grab;
-    height: 10px;
-    width: 10px;
-    background-color: #f00;
-    border-radius: 50%;
-    display: inline-block;
-    position: absolute;
-    left: 130px;
-    top: 40px;
-  }
-  .start_dot:hover {
-    border: 5px solid cornflowerblue;
-  }
   .center {
     position: absolute;
     top: 300px;
