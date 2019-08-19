@@ -6,6 +6,11 @@
       </div>
       <canvas id="map-canvas" :width="windowWidth" height="1500"></canvas>
     </section>
+    <div class="buttons_area">
+      <span>
+        <button class="new_idea_button">New Idea</button>
+      </span>
+    </div>
   </div>
 </template>
 
@@ -32,14 +37,17 @@
         this.dragging = true;
         this.parentX = event.clientX;
         this.parentY = event.clientY;
-        var c = document.createElement('CANVAS');
-        c.id = this.parentX + "";
-        document.getElementById('map-container').appendChild(c);
-        c.style.position="absolute";
-        c.style.top = 0;
-        c.style.left = 0;
-        c.width = this.windowWidth;
-        c.height = 1500;
+        let canvas_id = this.parentX + "";
+        if (!document.getElementById(canvas_id)) {
+          var c = document.createElement('CANVAS');
+          c.id = this.parentX + "";
+          document.getElementById('map-container').appendChild(c);
+          c.style.position="absolute";
+          c.style.top = 0;
+          c.style.left = 0;
+          c.width = this.windowWidth;
+          c.height = 1500;
+        }
         this.x = this.y = 0;
       },
       stopDrag(event) {
@@ -121,6 +129,16 @@
 </script>
 
 <style scoped lang="scss">
+  .new_idea_button {
+    background-color: #17a2b8;
+    padding: 2vh;
+    font-size: 3vh;
+  }
+  .buttons_area {
+    position: absolute;
+    left: 93%;
+    top: 15px;
+  }
   .center {
     position: absolute;
     top: 300px;
