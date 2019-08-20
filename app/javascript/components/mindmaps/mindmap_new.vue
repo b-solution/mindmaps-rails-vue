@@ -1,16 +1,19 @@
 <template>
   <div>
-    <section id="map-container" class="map-container" @mousemove.prevent="doDrag">
+    <section v-if="!loading" id="map-container" class="map-container" @mousemove.prevent="doDrag">
       <div class="center">
         <span @mousedown="startDrag" class="start_dot"></span>
         <input type="text" v-model="mainIdea" class="central_idea"/>
       </div>
-      <input-field v-for="node in nodes" v-model="node.value" @start-drag="startDrag" :style="getNodeStyle(node)" class="pos_abs"></input-field>
+      <input-field v-for="node in nodes" :key="`${node.left}.${node.top}`" v-model="node.value" @start-drag="startDrag" :style="getNodeStyle(node)" class="pos_abs"></input-field>
       <canvas id="map-canvas" :width="windowWidth" height="1500"></canvas>
     </section>
     <div class="buttons_area">
       <span>
-        <button class="new_idea_button">New Idea</button>
+        <button class="options_button">New</button>
+        <button class="options_button">Save</button>
+        <button class="options_button">Open</button>
+        <button class="options_button">Reset</button>
       </span>
     </div>
   </div>
@@ -18,14 +21,17 @@
 
 <script>
   import InputField from './idea_input_field'
+  import http from '../../common/http'
 
   export default {
     components: {InputField},
     data() {
       return {
         mainIdea: "Central Idea",
+        currentMindMap: {},
         nodes: [],
         connections: [],
+        loading: true,
         dragging: false,
         x: 0,
         y: 0,
@@ -35,6 +41,23 @@
       }
     },
     methods: {
+      getMinmap(id) {
+        http.get(`/mindmaps/${id}.json`).then((res) => {
+          this.currentMindMap = res.data.mindmap;
+          this.loading = false;
+        }).catch((error) => {
+          console.log(error);
+        })
+      },
+      getNewMindmap() {
+        http.get('/mindmaps/new.json').then((res) => {
+          this.currentMindMap = res.data.mindmap;
+          this.loading = false;
+        }).catch((error) => {
+          console.log(error);
+          this.loading = false;
+        })
+      },
       startDrag(event) {
         this.dragging = true;
         this.parentX = event.clientX;
@@ -95,6 +118,11 @@
       }
     },
     mounted() {
+      if (this.$route.query.key) {
+        this.getMinmap(this.$route.query.key)
+      } else {
+        this.getNewMindmap();
+      }
       window.addEventListener('mouseup', this.stopDrag);
     },
     watch: {
@@ -135,14 +163,15 @@
   .pos_abs {
     position: absolute !important;
   }
-  .new_idea_button {
+  .options_button {
+    cursor: pointer;
     background-color: #17a2b8;
     padding: 1vh;
-    font-size: 2vh;
+    font-size: 20px;
   }
   .buttons_area {
     position: absolute;
-    left: 93%;
+    left: 83%;
     top: 15px;
   }
   .center {
