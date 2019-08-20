@@ -1,21 +1,26 @@
 <template>
   <div>
     <span @mousedown="startDrag" class="start_dot"></span>
-    <input type="text" v-model="value" class="central_idea"/>
+    <input type="text" v-model="localValue" class="new_idea"/>
   </div>
 </template>
 
 <script>
   export default {
     props: ['value'],
+    data() {
+      return {
+        localValue: this.value
+      }
+    },
     methods: {
       startDrag(event) {
         this.$emit('start-drag', event);
       }
     },
     watch: {
-      value() {
-        this.$emit("input", this.value)
+      localValue() {
+        this.$emit("input", this.localValue)
       }
     }
   }
@@ -23,13 +28,13 @@
 </script>
 
 <style scoped lang="scss">
-  .central_idea {
+  .new_idea {
     text-align: center;
-    padding: 5% 7%;
+    padding: 5% 5%;
     border: 1px solid;
     border-radius: 11%;
-    font-weight: 900;
-    font-size: 100%;
+    font-weight: 700;
+    font-size: 80%;
   }
   .start_dot {
     cursor: grab;
@@ -39,8 +44,8 @@
     border-radius: 50%;
     display: inline-block;
     position: absolute;
-    left: 130px;
-    top: 40px;
+    left: 80px;
+    top: 15px;
   }
   .start_dot:hover {
     border: 5px solid cornflowerblue;
