@@ -3,9 +3,9 @@
     <section v-if="!loading" id="map-container" class="map-container" @mousemove.prevent="doDrag">
       <div class="center" :style="C_centeralNodePosition">
         <span @mousedown="startDrag" class="start_dot"></span>
-        <input type="text" v-model="mainIdea" class="central_idea"/>
+        <input type="text" v-model="currentMindMap.name" class="central_idea"/>
       </div>
-      <input-field v-for="node in nodes" :key="`${node.left}.${node.top}`" v-model="node.value" @start-drag="startDrag" :style="getNodeStyle(node)" class="pos_abs"></input-field>
+      <input-field v-for="node in currentMindMap.nodes" :key="`${node.left}.${node.top}`" v-model="node.title" @start-drag="startDrag" :style="getNodeStyle(node)" class="pos_abs"></input-field>
       <canvas id="map-canvas" :width="windowWidth" :height="windowHeight"></canvas>
     </section>
     <div class="buttons_area">
@@ -59,7 +59,7 @@
       </div>
       <div class="col form-inline center_flex">
         <label for="mindmap_name">Mindmap Name:</label>
-        <input type="text" placeholder="Enter a unique name" v-model="saveMapName" name="mindmap[name]" class="ml-3 form-control">
+        <input type="text" placeholder="Enter a unique name" v-model="currentMindMap.name" name="mindmap[name]" class="ml-3 form-control">
       </div>
       <div class="center_flex mt_2">
         <a 
@@ -105,7 +105,7 @@
           @click.stop="saveCurrentMap" 
         >
           <i class="material-icons mr-1">done</i>
-          Save
+          Open
         </a>
         <a 
           href="javascript:;" 
@@ -156,19 +156,15 @@
     components: {InputField, SweetModal},
     data() {
       return {
-        mainIdea: "Central Idea",
         currentMindMap: {},
-        nodes: [],
-        connections: [],
         loading: true,
         dragging: false,
-        x: 0,
-        y: 0,
+        currentPositionX: 0,
+        currentPositionY: 0,
         parentX: 0,
         parentY: 0,
         windowWidth: window.innerWidth,
         windowHeight: window.innerHeight,
-        saveMapName: '',
         openMapmind: {
           name: '',
           id: ''
@@ -178,7 +174,7 @@
     computed: {
       C_centeralNodePosition() {
         return {
-          left: (Math.floor(this.windowWidth/2) - 100) +'px', 
+          left: (Math.floor(this.windowWidth/2) - 150) +'px', 
           top: (Math.floor(this.windowHeight/2) - 50) +'px'
         }
       }
@@ -216,33 +212,33 @@
           c.width = this.windowWidth;
           c.height = this.windowHeight;
         }
-        this.x = this.y = 0;
+        this.currentPositionX = this.currentPositionY = 0;
       },
       stopDrag(event) {
         if (this.dragging) {
           this.dragging = false;
 
           // To prevent adding new input box if user clicks on red circle.
-          if (this.x == 0 && this.y == 0) {return;}
+          if (this.currentPositionX == 0 && this.currentPositionY == 0) {return;}
           let node = {
-            value: "New Idea",
-            left: this.x,
-            top: this.y
+            title: "New Idea",
+            left: this.currentPositionX,
+            top: this.currentPositionY
           }
-          this.nodes.push(node);
-          this.connections.push({
+          this.currentMindMap.nodes.push(node);
+          this.currentMindMap.connections.push({
             parentX: this.parentX, 
             parentY: this.parentY, 
-            childX: this.x, 
-            childY: this.y
+            childX: this.currentPositionX, 
+            childY: this.currentPositionY
           });
-          this.x = this.y = 0;
+          this.currentPositionX = this.currentPositionY = 0;
         }
       },
       doDrag(event) {
         if (this.dragging) {
-          this.x = event.clientX ;
-          this.y = event.clientY ;
+          this.currentPositionX = event.clientX ;
+          this.currentPositionY = event.clientY ;
 
           var c = document.getElementById(this.parentX + "")
           var ctx = c.getContext("2d");
@@ -252,7 +248,7 @@
           ctx.lineWidth = "2";
           ctx.strokeStyle = "red";
           ctx.moveTo(this.parentX, this.parentY);
-          ctx.lineTo(this.x, this.y);
+          ctx.lineTo(this.currentPositionX, this.currentPositionY);
           ctx.stroke();
         }
       },
@@ -285,13 +281,14 @@
       window.addEventListener('mouseup', this.stopDrag);
     },
     watch: {
-      connections: function(cons) {
+      "currentMindMap.connections": function(cons) {
         document.querySelectorAll("CANVAS").forEach((canvas) => {
           if(canvas.id != "map-canvas") {
             canvas.parentNode.removeChild(canvas)
           }
         })
         var c = document.getElementById("map-canvas")
+        if (!c) { return; }
         var ctx = c.getContext("2d");
         ctx.clearRect(0, 0, c.width, c.height)
 
