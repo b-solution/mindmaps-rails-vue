@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_08_15_145645) do
+ActiveRecord::Schema.define(version: 2019_08_22_093128) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -38,6 +38,8 @@ ActiveRecord::Schema.define(version: 2019_08_15_145645) do
     t.bigint "mindmap_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "left"
+    t.integer "top"
     t.index ["mindmap_id"], name: "index_nodes_on_mindmap_id"
   end
 
