@@ -3,7 +3,7 @@
     <section v-if="!loading" id="map-container" class="map-container" @mousemove.prevent="doDrag">
       <div class="center" :style="C_centeralNodePosition">
         <span @mousedown="startDrag" class="start_dot"></span>
-        <input type="text" v-model="currentMindMap.name" class="central_idea"/>
+        <input type="text" ref="central_idea" @input="updateCentralIdea" v-model="centralIdea" class="central_idea"/>
       </div>
       <input-field v-for="node in currentMindMap.nodes" :key="`${node.left}.${node.top}`" v-model="node.title" @start-drag="startDrag" :style="getNodeStyle(node)" class="pos_abs"></input-field>
       <canvas id="map-canvas" :width="windowWidth" :height="windowHeight"></canvas>
@@ -151,11 +151,13 @@
   import InputField from './idea_input_field'
   import http from '../../common/http'
   import {SweetModal }from 'sweet-modal-vue';
+  import _ from 'lodash';
 
   export default {
     components: {InputField, SweetModal},
     data() {
       return {
+        centralIdea: '',
         currentMindMap: {},
         loading: true,
         dragging: false,
@@ -325,7 +327,14 @@
         } else if (retry_count < 5) {
           setTimeout(this.drawLines(retry_count++), 100); 
         }
-      }
+      },
+      updateCentralIdea: _.debounce(
+        function(input) {
+          console.log("awdqwdqw")
+          this.currentMindMap.name = this.$refs.central_idea.value;
+        },
+        500
+      ),
     },
     mounted() {
       if (this.$route.query.key) {
@@ -338,6 +347,7 @@
     watch: {
       currentMindMap: {
         handler: function(new_map) {
+          this.centralIdea = this.currentMindMap.name;
           document.querySelectorAll("CANVAS").forEach((canvas) => {
             if(canvas.id != "map-canvas") {
               canvas.parentNode.removeChild(canvas)
