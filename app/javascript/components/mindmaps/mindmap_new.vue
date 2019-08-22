@@ -11,7 +11,7 @@
     <div class="buttons_area">
       <span>
         <button @click.stop="$refs.newMapModal.open" class="options_button">New</button>
-        <button @click.stop="$refs.saveMapModal.open" class="options_button">Save</button>
+        <!-- <button @click.stop="$refs.saveMapModal.open" class="options_button">Save</button> -->
         <button @click.stop="$refs.openMapModal.open" class="options_button">Open</button>
         <button @click.stop="$refs.resetMapModal.open" class="options_button">Reset</button>
       </span>
@@ -161,10 +161,11 @@
         dragging: false,
         currentPositionX: 0,
         currentPositionY: 0,
-        parentX: 0,
-        parentY: 0,
+        parent_x: 0,
+        parent_y: 0,
         windowWidth: window.innerWidth,
         windowHeight: window.innerHeight,
+        stopWatch: false,
         openMapmind: {
           name: '',
           id: ''
@@ -180,9 +181,11 @@
       }
     },
     methods: {
-      getMinmap(id) {
+      getMindmap(id) {
         http.get(`/mindmaps/${id}.json`).then((res) => {
           this.currentMindMap = res.data.mindmap;
+          setTimeout(this.drawLines, 100);
+          this.updateQuery();
           this.loading = false;
         }).catch((error) => {
           console.log(error);
@@ -191,6 +194,9 @@
       getNewMindmap() {
         http.get('/mindmaps/new.json').then((res) => {
           this.currentMindMap = res.data.mindmap;
+          let query = Object.assign({}, this.$route.query);
+          delete query['key'];
+          this.$router.push({query: query});
           this.loading = false;
         }).catch((error) => {
           console.log(error);
@@ -199,12 +205,12 @@
       },
       startDrag(event) {
         this.dragging = true;
-        this.parentX = event.clientX;
-        this.parentY = event.clientY;
-        let canvas_id = this.parentX + "";
+        this.parent_x = event.clientX;
+        this.parent_y = event.clientY;
+        let canvas_id = this.parent_x + "";
         if (!document.getElementById(canvas_id)) {
           var c = document.createElement('CANVAS');
-          c.id = this.parentX + "";
+          c.id = this.parent_x + "";
           document.getElementById('map-container').appendChild(c);
           c.style.position="absolute";
           c.style.top = 0;
@@ -227,10 +233,10 @@
           }
           this.currentMindMap.nodes.push(node);
           this.currentMindMap.connections.push({
-            parentX: this.parentX, 
-            parentY: this.parentY, 
-            childX: this.currentPositionX, 
-            childY: this.currentPositionY
+            parent_x: this.parent_x, 
+            parent_y: this.parent_y, 
+            child_x: this.currentPositionX, 
+            child_y: this.currentPositionY
           });
           this.currentPositionX = this.currentPositionY = 0;
         }
@@ -240,14 +246,14 @@
           this.currentPositionX = event.clientX ;
           this.currentPositionY = event.clientY ;
 
-          var c = document.getElementById(this.parentX + "")
+          var c = document.getElementById(this.parent_x + "")
           var ctx = c.getContext("2d");
           ctx.clearRect(0, 0, c.width, c.height)
           ctx.beginPath();
 
           ctx.lineWidth = "2";
           ctx.strokeStyle = "red";
-          ctx.moveTo(this.parentX, this.parentY);
+          ctx.moveTo(this.parent_x, this.parent_y);
           ctx.lineTo(this.currentPositionX, this.currentPositionY);
           ctx.stroke();
         }
@@ -263,6 +269,24 @@
         window.open(window.location.origin+'/mindmaps/new')
       },
       saveCurrentMap() {
+        if (this.currentMindMap.nodes.length == 0) { return; }
+        if (this.currentMindMap.id) {
+          http.put(`/mindmaps/${this.currentMindMap.id}.json`, {mindmap: this.currentMindMap}).then((res) => {
+            this.stopWatch = true;
+            this.currentMindMap = res.data.mindmap;
+            this.updateQuery();
+          }).catch((error) => {
+            console.log(error)
+          })
+        } else {
+          http.post(`/mindmaps.json`, {mindmap: this.currentMindMap}).then((res) => {
+            this.stopWatch = true;
+            this.currentMindMap = res.data.mindmap;
+            this.updateQuery();
+          }).catch((error) => {
+            console.log(error)
+          })
+        }
         this.$refs.saveMapModal.close();
       },
       resetMindmapap() {
@@ -270,38 +294,77 @@
         // Temporaryly adding new map instead of resetting 
         this.getNewMindmap();
         this.$refs.resetMapModal.close();
+      },
+      updateQuery() {
+        let query = Object.assign({}, this.$route.query);
+        query['key'] = this.currentMindMap.id;
+        this.$router.push({query: query});
+      },
+      drawLines(retry_count=0) {
+        if (document.getElementById("map-canvas") != null) {
+          document.querySelectorAll("CANVAS").forEach((canvas) => {
+            if(canvas.id != "map-canvas") {
+              canvas.parentNode.removeChild(canvas)
+            }
+          })
+          var c = document.getElementById("map-canvas")
+          if (!c) { return; }
+          var ctx = c.getContext("2d");
+          ctx.clearRect(0, 0, c.width, c.height)
+
+          ctx.lineWidth = "2";
+          ctx.strokeStyle = "red";
+          
+          this.currentMindMap.connections.forEach((con) => {
+            ctx.beginPath();
+            ctx.moveTo(con.child_x, con.child_y);
+            ctx.lineTo(con.parent_x, con.parent_y);
+            ctx.stroke();
+            ctx.closePath();
+          })
+        } else if (retry_count < 5) {
+          setTimeout(this.drawLines(retry_count++), 100); 
+        }
       }
     },
     mounted() {
       if (this.$route.query.key) {
-        this.getMinmap(this.$route.query.key)
+        this.getMindmap(this.$route.query.key)
       } else {
         this.getNewMindmap();
       }
       window.addEventListener('mouseup', this.stopDrag);
     },
     watch: {
-      "currentMindMap.connections": function(cons) {
-        document.querySelectorAll("CANVAS").forEach((canvas) => {
-          if(canvas.id != "map-canvas") {
-            canvas.parentNode.removeChild(canvas)
-          }
-        })
-        var c = document.getElementById("map-canvas")
-        if (!c) { return; }
-        var ctx = c.getContext("2d");
-        ctx.clearRect(0, 0, c.width, c.height)
+      currentMindMap: {
+        handler: function(new_map) {
+          document.querySelectorAll("CANVAS").forEach((canvas) => {
+            if(canvas.id != "map-canvas") {
+              canvas.parentNode.removeChild(canvas)
+            }
+          })
+          var c = document.getElementById("map-canvas")
+          if (!c) { return; }
+          var ctx = c.getContext("2d");
+          ctx.clearRect(0, 0, c.width, c.height)
 
-        ctx.lineWidth = "2";
-        ctx.strokeStyle = "red";
-        
-        cons.forEach((con) => {
-          ctx.beginPath();
-          ctx.moveTo(con.childX, con.childY);
-          ctx.lineTo(con.parentX, con.parentY);
-          ctx.stroke();
-          ctx.closePath();
-        })
+          ctx.lineWidth = "2";
+          ctx.strokeStyle = "red";
+          
+          new_map.connections.forEach((con) => {
+            ctx.beginPath();
+            ctx.moveTo(con.child_x, con.child_y);
+            ctx.lineTo(con.parent_x, con.parent_y);
+            ctx.stroke();
+            ctx.closePath();
+          })
+          if (this.stopWatch) { 
+            this.stopWatch = false;
+            return; 
+          }
+          this.saveCurrentMap();
+        },
+        deep: true
       }
     }
   }

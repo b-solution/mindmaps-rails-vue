@@ -12,6 +12,14 @@ class MindmapsController < ApplicationController
 
   def create
     @mindmap = Mindmap.create(mindmap_params)
+    @mindmap.nodes.destroy_all if params['mindmap']['nodes'].present?
+    params['mindmap']['nodes'].each do |nod|
+      @mindmap.nodes << Node.create(title: nod[:title], left: nod[:left], top: nod[:top])
+    end if params['mindmap']['nodes'].present?
+    @mindmap.connections.destroy_all if params['mindmap']['connections'].present?
+    params['mindmap']['connections'].each do |con|
+      @mindmap.connections << Connection.create(parent_x: con[:parent_x], parent_y: con[:parent_y], child_x: con[:child_x], child_y: con[:child_y])
+    end if params['mindmap']['connections'].present?
     respond_to do |format|
       format.json { render json: {mindmap: mindmap_as_json(@mindmap)}}
       format.html { }
@@ -19,7 +27,19 @@ class MindmapsController < ApplicationController
   end
 
   def update
-    
+    @mindmap.update(mindmap_params)
+    @mindmap.nodes.destroy_all if params['mindmap']['nodes'].present?
+    params['mindmap']['nodes'].each do |nod|
+      @mindmap.nodes << Node.create(title: nod[:title], left: nod[:left], top: nod[:top])
+    end if params['mindmap']['nodes'].present?
+    @mindmap.connections.destroy_all if params['mindmap']['connections'].present?
+    params['mindmap']['connections'].each do |con|
+      @mindmap.connections << Connection.create(parent_x: con[:parent_x], parent_y: con[:parent_y], child_x: con[:child_x], child_y: con[:child_y])
+    end if params['mindmap']['connections'].present?
+    respond_to do |format|
+      format.json { render json: {mindmap: mindmap_as_json(@mindmap)}}
+      format.html { }
+    end
   end
 
   def show
@@ -43,6 +63,6 @@ class MindmapsController < ApplicationController
   end
 
   def mindmap_params
-    params.require(:mindmap).permit(nodes: [], connections: [])
+    params.require(:mindmap).permit(:name)
   end
 end
