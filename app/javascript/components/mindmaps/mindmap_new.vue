@@ -231,6 +231,13 @@
 
           // To prevent adding new input box if user clicks on red circle.
           if (this.currentPositionX == 0 && this.currentPositionY == 0) {return;}
+
+          if ((this.windowWidth - this.currentPositionX) < 100) {
+            this.currentPositionX -= 150;
+          }
+          if ((this.windowHeight - this.currentPositionY) < 50) {
+            this.currentPositionY -= 50;
+          }
           let node = {
             title: "New Idea",
             left: this.currentPositionX,
