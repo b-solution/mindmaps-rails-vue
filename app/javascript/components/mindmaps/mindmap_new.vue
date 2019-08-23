@@ -269,8 +269,8 @@
       openNewMapNewWindow() {
         window.open(window.location.origin+'/mindmaps/new')
       },
-      saveCurrentMap() {
-        if (this.currentMindMap.nodes.length == 0) { return; }
+      saveCurrentMap(restore=false) {
+        if (this.currentMindMap.nodes.length == 0 && restore == false) { return; }
         if (this.currentMindMap.id) {
           http.put(`/mindmaps/${this.currentMindMap.id}.json`, {mindmap: this.currentMindMap}).then((res) => {
             this.stopWatch = true;
@@ -291,9 +291,14 @@
         this.$refs.saveMapModal.close();
       },
       resetMindmapap() {
-        // Add logic to reset same map on frontend and backend both
-        // Temporaryly adding new map instead of resetting 
-        this.getNewMindmap();
+        this.stopWatch = true;
+        this.currentMindMap.name = "Central Idea";
+        this.stopWatch = true;
+        this.currentMindMap.nodes = [];
+        this.stopWatch = true;
+        this.currentMindMap.connections = []
+
+        this.saveCurrentMap(true);
         this.$refs.resetMapModal.close();
       },
       updateQuery() {

@@ -12,11 +12,11 @@ class MindmapsController < ApplicationController
 
   def create
     @mindmap = Mindmap.create(mindmap_params)
-    @mindmap.nodes.destroy_all if params['mindmap']['nodes'].present?
+    @mindmap.nodes.destroy_all
     params['mindmap']['nodes'].each do |nod|
       @mindmap.nodes << Node.create(title: nod[:title], left: nod[:left], top: nod[:top])
     end if params['mindmap']['nodes'].present?
-    @mindmap.connections.destroy_all if params['mindmap']['connections'].present?
+    @mindmap.connections.destroy_all
     params['mindmap']['connections'].each do |con|
       @mindmap.connections << Connection.create(parent_x: con[:parent_x], parent_y: con[:parent_y], child_x: con[:child_x], child_y: con[:child_y])
     end if params['mindmap']['connections'].present?
@@ -28,11 +28,11 @@ class MindmapsController < ApplicationController
 
   def update
     @mindmap.update(mindmap_params)
-    @mindmap.nodes.destroy_all if params['mindmap']['nodes'].present?
+    @mindmap.nodes.destroy_all
     params['mindmap']['nodes'].each do |nod|
       @mindmap.nodes << Node.create(title: nod[:title], left: nod[:left], top: nod[:top])
     end if params['mindmap']['nodes'].present?
-    @mindmap.connections.destroy_all if params['mindmap']['connections'].present?
+    @mindmap.connections.destroy_all
     params['mindmap']['connections'].each do |con|
       @mindmap.connections << Connection.create(parent_x: con[:parent_x], parent_y: con[:parent_y], child_x: con[:child_x], child_y: con[:child_y])
     end if params['mindmap']['connections'].present?
