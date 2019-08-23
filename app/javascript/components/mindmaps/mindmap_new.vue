@@ -181,14 +181,18 @@
         http.get(`/mindmaps/${id}.json`).then((res) => {
           this.currentMindMap = res.data.mindmap;
           setTimeout(this.drawLines, 100);
+          this.closeOpenMapModal();
           this.updateQuery();
           this.loading = false;
         }).catch((error) => {
+          alert(`Mind map with id ${id} not found`);
           console.log(error);
         })
       },
       openPreviousMap() {
         this.getMindmap(this.openMindMap.key);
+      },
+      closeOpenMapModal() {
         this.openMindMap.key = '';
         this.$refs.openMapModal.close();
       },
