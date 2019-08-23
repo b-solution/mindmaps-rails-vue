@@ -23,7 +23,7 @@
         </div>
       </div>
       <h3 class="f_smooth_auto">Are you Sure?</h3>
-      <p class="text-muted fs_18">Your current changes will be discarded, you won't be able to revert this. You may want to open in new Tab!</p>
+      <p class="text-muted fs_18">You may want to open in new Tab!</p>
       <div class="center_flex mt_2">
         <a 
           href="javascript:;" 
@@ -31,7 +31,7 @@
           @click.stop="openNewMap" 
         >
           <i class="material-icons mr-1">done</i>
-          Continue
+          Continue Here
         </a>
         <a 
           href="javascript:;" 
@@ -39,7 +39,7 @@
           @click.stop="openNewMapNewWindow" 
         >
           <i class="material-icons mr-1">open_in_new</i>
-          Open in new Tab!
+          Open new Tab!
         </a>
         <a 
           href="javascript:;" 
@@ -86,23 +86,18 @@
           <i class="material-icons text-white">folder_open</i>
         </div>
       </div>
-      <p class="text-muted fs_18">Just a heads-up! Your current map will be discarded. You may want save this before opening a new map.</p>
-      <p class="text-muted fs_18">Enter the map details you want to open here!</p>
-      <form class="form-horizontal">   
-        <div class="row form-group">
-          <label class="control-label col-4" for="mindmap_name">Mindmap Name:</label>
-          <input type="text" placeholder="Enter map name" v-model="openMapmind.name" name="mindmap[name]" class="form-control col-6">
-        </div>
+      <p class="text-muted fs_18">Enter the map key you want to open here!</p>
+      <div class="form-horizontal">   
         <div class="row form-group mt-2">
-          <label class="control-label col-4" for="mindmap_name">Mindmap id:</label>
-          <input type="text" placeholder="Enter map id" v-model="openMapmind.id" name="mindmap[name]" class="form-control col-6 ">
+          <label class="control-label col-4" for="mindmap_name">Mindmap key:</label>
+          <input type="text" placeholder="Enter map id" v-model="openMindMap.key" class="form-control col-6 ">
         </div>
-      </form>
+      </div>
       <div class="center_flex mt_2">
         <a 
           href="javascript:;" 
           class="btn_2 bg-success text-white mr_1"
-          @click.stop="saveCurrentMap" 
+          @click.stop.prevent="openPreviousMap" 
         >
           <i class="material-icons mr-1">done</i>
           Open
@@ -110,7 +105,7 @@
         <a 
           href="javascript:;" 
           class="btn_2 bg-primary text-white mr_1"
-          @click.stop="$refs.openMapModal.close" 
+          @click.stop.prevent="$refs.openMapModal.close" 
         >
           <i class="material-icons mr-1">cancel</i>
           Cancel
@@ -168,9 +163,8 @@
         windowWidth: window.innerWidth,
         windowHeight: window.innerHeight,
         stopWatch: false,
-        openMapmind: {
-          name: '',
-          id: ''
+        openMindMap: {
+          key: ''
         }
       }
     },
@@ -193,10 +187,15 @@
           console.log(error);
         })
       },
+      openPreviousMap() {
+        this.getMindmap(this.openMindMap.key);
+        this.openMindMap.key = '';
+        this.$refs.openMapModal.close();
+      },
       getNewMindmap() {
         http.get('/mindmaps/new.json').then((res) => {
           this.currentMindMap = res.data.mindmap;
-          let query = Object.assign({}, this.$route.query);
+          let query = {};
           delete query['key'];
           this.$router.push({query: query});
           this.loading = false;
@@ -298,7 +297,8 @@
         this.$refs.resetMapModal.close();
       },
       updateQuery() {
-        let query = Object.assign({}, this.$route.query);
+        let query = {};
+        console.log(this.currentMindMap.id)
         query['key'] = this.currentMindMap.id;
         this.$router.push({query: query});
       },
@@ -330,7 +330,6 @@
       },
       updateCentralIdea: _.debounce(
         function(input) {
-          console.log("awdqwdqw")
           this.currentMindMap.name = this.$refs.central_idea.value;
         },
         500
