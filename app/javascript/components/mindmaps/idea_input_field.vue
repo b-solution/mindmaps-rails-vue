@@ -1,22 +1,32 @@
 <template>
   <div>
     <span @mousedown="startDrag" class="start_dot"></span>
-    <input type="text" v-model="localValue" class="new_idea"/>
+    <input type="text" ref="new_idea" @input="updateIdea" v-model="tempLocalValue" class="new_idea"/>
   </div>
 </template>
 
 <script>
+  import _ from 'lodash';
+
   export default {
     props: ['value'],
     data() {
       return {
-        localValue: this.value
+        localValue: this.value,
+        tempLocalValue: this.value
       }
     },
     methods: {
       startDrag(event) {
         this.$emit('start-drag', event);
-      }
+      },
+      updateIdea: _.debounce(
+        function(input) {
+          this.localValue = this.$refs.new_idea.value;
+          this.tempLocalValue = this.$refs.new_idea.value;
+        },
+        500
+      ),
     },
     watch: {
       localValue() {
