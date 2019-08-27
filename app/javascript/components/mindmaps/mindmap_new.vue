@@ -5,13 +5,19 @@
         <span @mousedown="startDrag" class="start_dot"></span>
         <input type="text" ref="central_idea" @input="updateCentralIdea" v-model="centralIdea" class="central_idea"/>
       </div>
-      <input-field v-for="node in currentMindMap.nodes" :key="`${node.left}.${node.top}`" v-model="node.title" @start-drag="startDrag" :style="getNodeStyle(node)" class="pos_abs"></input-field>
+      <input-field 
+        @mousedown-event="startDragNode($event, node)" 
+        v-for="node in currentMindMap.nodes" 
+        :key="`${node.position_x}.${node.position_y}`" 
+        v-model="node.title" 
+        @start-drag="startDrag($event, node)" 
+        :style="getNodeStyle(node)" 
+        class="pos_abs input_field"></input-field>
       <canvas id="map-canvas" :width="windowWidth" :height="windowHeight"></canvas>
     </section>
     <div class="buttons_area">
       <span>
         <button @click.stop="$refs.newMapModal.open" class="options_button">New</button>
-        <!-- <button @click.stop="$refs.saveMapModal.open" class="options_button">Save</button> -->
         <button @click.stop="$refs.openMapModal.open" class="options_button">Open</button>
         <button @click.stop="$refs.resetMapModal.open" class="options_button">Reset</button>
       </span>
@@ -51,35 +57,6 @@
         </a>
       </div>
     </sweet-modal>
-    <sweet-modal ref="saveMapModal" class="of_v">
-      <div class="sweet_model_icon_div">
-        <div class="radius_circle bg-success center_flex mlr_a">
-          <i class="material-icons text-white">save</i>
-        </div>
-      </div>
-      <div class="col form-inline center_flex">
-        <label for="mindmap_name">Mindmap Name:</label>
-        <input type="text" placeholder="Enter a unique name" v-model="currentMindMap.name" name="mindmap[name]" class="ml-3 form-control">
-      </div>
-      <div class="center_flex mt_2">
-        <a 
-          href="javascript:;" 
-          class="btn_2 bg-success text-white mr_1"
-          @click.stop="saveCurrentMap" 
-        >
-          <i class="material-icons mr-1">done</i>
-          Save
-        </a>
-        <a 
-          href="javascript:;" 
-          class="btn_2 bg-primary text-white mr_1"
-          @click.stop="$refs.saveMapModal.close" 
-        >
-          <i class="material-icons mr-1">cancel</i>
-          Cancel
-        </a>
-      </div>
-    </sweet-modal>
     <sweet-modal ref="openMapModal" class="of_v">
       <div class="sweet_model_icon_div">
         <div class="radius_circle bg-success center_flex mlr_a">
@@ -90,7 +67,7 @@
       <div class="form-horizontal">   
         <div class="row form-group mt-2">
           <label class="control-label col-4" for="mindmap_name">Mindmap key:</label>
-          <input type="text" placeholder="Enter map id" v-model="openMindMap.key" class="form-control col-6 ">
+          <input type="text" placeholder="Enter map id" v-model="openMindMapKey" class="form-control col-6 ">
         </div>
       </div>
       <div class="center_flex mt_2">
@@ -152,20 +129,23 @@
     components: {InputField, SweetModal},
     data() {
       return {
+        selectedNode: null,
+        nodeParent: null,
         centralIdea: '',
         currentMindMap: {},
         loading: true,
         dragging: false,
+        draggingNode: false,
         currentPositionX: 0,
         currentPositionY: 0,
+        nodeOffsetX: 0,
+        nodeOffsetY: 0,
         parent_x: 0,
         parent_y: 0,
         windowWidth: window.innerWidth,
         windowHeight: window.innerHeight,
         stopWatch: false,
-        openMindMap: {
-          key: ''
-        }
+        openMindMapKey: ''
       }
     },
     computed: {
@@ -179,6 +159,7 @@
     methods: {
       getMindmap(id) {
         http.get(`/mindmaps/${id}.json`).then((res) => {
+          this.stopWatch = true;
           this.currentMindMap = res.data.mindmap;
           setTimeout(this.drawLines, 100);
           this.closeOpenMapModal();
@@ -190,10 +171,10 @@
         })
       },
       openPreviousMap() {
-        this.getMindmap(this.openMindMap.key);
+        this.getMindmap(this.openMindMapKey);
       },
       closeOpenMapModal() {
-        this.openMindMap.key = '';
+        this.openMindMapKey = '';
         this.$refs.openMapModal.close();
       },
       getNewMindmap() {
@@ -208,7 +189,11 @@
           this.loading = false;
         })
       },
-      startDrag(event) {
+      startDrag(event, p_node=null) {
+        console.log("start Drag");
+        if (p_node) {
+          this.nodeParent = p_node;
+        }
         this.dragging = true;
         this.parent_x = event.clientX;
         this.parent_y = event.clientY;
@@ -228,8 +213,11 @@
       stopDrag(event) {
         if (this.dragging) {
           this.dragging = false;
+          this.draggingNode = false;
+          console.log("stopped new node");
 
           // To prevent adding new input box if user clicks on red circle.
+          this.removeLines();
           if (this.currentPositionX == 0 && this.currentPositionY == 0) {return;}
 
           if ((this.windowWidth - this.currentPositionX) < 100) {
@@ -240,21 +228,26 @@
           }
           let node = {
             title: "New Idea",
-            left: this.currentPositionX,
-            top: this.currentPositionY
+            position_x: this.currentPositionX,
+            position_y: this.currentPositionY,
+            parent_node: this.nodeParent ? this.nodeParent.id : 0
           }
           this.currentMindMap.nodes.push(node);
-          this.currentMindMap.connections.push({
-            parent_x: this.parent_x, 
-            parent_y: this.parent_y, 
-            child_x: this.currentPositionX, 
-            child_y: this.currentPositionY
-          });
           this.currentPositionX = this.currentPositionY = 0;
+          this.nodeParent = null;
+        } 
+        if (this.draggingNode) {
+          this.dragging = false;
+          this.draggingNode = false;
+          this.saveCurrentMap()
+          this.selectedNode = null;
+          console.log("stoped old node");
+          this.removeLines();
         }
       },
       doDrag(event) {
         if (this.dragging) {
+          console.log("dragging new node");
           this.currentPositionX = event.clientX ;
           this.currentPositionY = event.clientY ;
 
@@ -268,10 +261,17 @@
           ctx.moveTo(this.parent_x, this.parent_y);
           ctx.lineTo(this.currentPositionX, this.currentPositionY);
           ctx.stroke();
+        } else if (this.draggingNode) {
+          console.log("dragging old node");
+          let node = this.currentMindMap.nodes.findIndex((nod) => nod.id == this.selectedNode.id);
+          this.stopWatch = true;
+          this.currentMindMap.nodes[node].position_x = event.clientX - this.nodeOffsetX;
+          this.stopWatch = true;
+          this.currentMindMap.nodes[node].position_y = event.clientY - this.nodeOffsetY;
         }
       },
       getNodeStyle(node) {
-        return {left: node.left +'px', top: node.top +'px'}
+        return {left: node.position_x +'px', top: node.position_y +'px'}
       },
       openNewMap() {
         this.getNewMindmap();
@@ -299,32 +299,25 @@
             console.log(error)
           })
         }
-        this.$refs.saveMapModal.close();
       },
       resetMindmapap() {
         this.stopWatch = true;
         this.currentMindMap.name = "Central Idea";
         this.stopWatch = true;
         this.currentMindMap.nodes = [];
-        this.stopWatch = true;
-        this.currentMindMap.connections = []
 
         this.saveCurrentMap(true);
         this.$refs.resetMapModal.close();
       },
       updateQuery() {
         let query = {};
-        console.log(this.currentMindMap.id)
         query['key'] = this.currentMindMap.id;
         this.$router.push({query: query});
       },
       drawLines(retry_count=0) {
+        return;
         if (document.getElementById("map-canvas") != null) {
-          document.querySelectorAll("CANVAS").forEach((canvas) => {
-            if(canvas.id != "map-canvas") {
-              canvas.parentNode.removeChild(canvas)
-            }
-          })
+          this.removeLines();
           var c = document.getElementById("map-canvas")
           if (!c) { return; }
           var ctx = c.getContext("2d");
@@ -350,6 +343,21 @@
         },
         500
       ),
+      startDragNode(event, node) {
+        console.log("started node drag");
+        this.selectedNode = node;
+        this.nodeOffsetX = event.clientX - node.position_x;
+        this.nodeOffsetY = event.clientY - node.position_y;
+        this.draggingNode = true;
+        this.currentPositionX = this.currentPositionY = 0;
+      },
+      removeLines() {
+        document.querySelectorAll("CANVAS").forEach((canvas) => {
+          if(canvas.id != "map-canvas") {
+            canvas.parentNode.removeChild(canvas)
+          }
+        })
+      }
     },
     mounted() {
       if (this.$route.query.key) {
@@ -363,26 +371,22 @@
       currentMindMap: {
         handler: function(new_map) {
           this.centralIdea = this.currentMindMap.name;
-          document.querySelectorAll("CANVAS").forEach((canvas) => {
-            if(canvas.id != "map-canvas") {
-              canvas.parentNode.removeChild(canvas)
-            }
-          })
-          var c = document.getElementById("map-canvas")
-          if (!c) { return; }
-          var ctx = c.getContext("2d");
-          ctx.clearRect(0, 0, c.width, c.height)
+          this.removeLines();
+          // var c = document.getElementById("map-canvas")
+          // if (!c) { return; }
+          // var ctx = c.getContext("2d");
+          // ctx.clearRect(0, 0, c.width, c.height)
 
-          ctx.lineWidth = "2";
-          ctx.strokeStyle = "red";
+          // ctx.lineWidth = "2";
+          // ctx.strokeStyle = "red";
           
-          new_map.connections.forEach((con) => {
-            ctx.beginPath();
-            ctx.moveTo(con.child_x, con.child_y);
-            ctx.lineTo(con.parent_x, con.parent_y);
-            ctx.stroke();
-            ctx.closePath();
-          })
+          // new_map.connections.forEach((con) => {
+          //   ctx.beginPath();
+          //   ctx.moveTo(con.child_x, con.child_y);
+          //   ctx.lineTo(con.parent_x, con.parent_y);
+          //   ctx.stroke();
+          //   ctx.closePath();
+          // })
           if (this.stopWatch) { 
             this.stopWatch = false;
             return; 
@@ -406,6 +410,9 @@
   }
   .pos_abs {
     position: absolute !important;
+  }
+  .input_field {
+    cursor: pointer;
   }
   .options_button {
     cursor: pointer;

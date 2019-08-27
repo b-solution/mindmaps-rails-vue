@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div @mousedown="startDragIdea" class="">
     <span @mousedown="startDrag" class="start_dot"></span>
     <input type="text" ref="new_idea" @input="updateIdea" v-model="tempLocalValue" class="new_idea"/>
   </div>
@@ -27,6 +27,9 @@
         },
         500
       ),
+      startDragIdea(event) {
+        this.$emit('mousedown-event', event);
+      }
     },
     watch: {
       localValue() {

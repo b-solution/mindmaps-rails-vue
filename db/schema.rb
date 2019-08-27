@@ -10,21 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_08_22_093128) do
+ActiveRecord::Schema.define(version: 2019_08_15_145638) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
-
-  create_table "connections", force: :cascade do |t|
-    t.float "parent_x"
-    t.float "parent_y"
-    t.float "child_x"
-    t.float "child_y"
-    t.bigint "mindmap_id"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["mindmap_id"], name: "index_connections_on_mindmap_id"
-  end
 
   create_table "mindmaps", force: :cascade do |t|
     t.string "name"
@@ -34,15 +23,14 @@ ActiveRecord::Schema.define(version: 2019_08_22_093128) do
 
   create_table "nodes", force: :cascade do |t|
     t.string "title"
-    t.boolean "root"
+    t.float "position_x"
+    t.float "position_y"
+    t.integer "parent_node"
     t.bigint "mindmap_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "left"
-    t.integer "top"
     t.index ["mindmap_id"], name: "index_nodes_on_mindmap_id"
   end
 
-  add_foreign_key "connections", "mindmaps"
   add_foreign_key "nodes", "mindmaps"
 end
