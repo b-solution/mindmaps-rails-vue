@@ -172,7 +172,7 @@
         http.get(`/mindmaps/${id}.json`).then((res) => {
           this.stopWatch = true;
           this.currentMindMap = res.data.mindmap;
-          setTimeout(this.drawLines, 100);
+          // setTimeout(this.drawLines, 100);
           this.closeOpenMapModal();
           this.updateQuery();
           this.loading = false;
@@ -258,9 +258,7 @@
         } else if (this.draggingNode) {
           this.nodeUpdatedFlag = true;
           let node = this.currentMindMap.nodes.findIndex((nod) => nod.id == this.selectedNode.id);
-          this.stopWatch = true;
           this.currentMindMap.nodes[node].position_x = event.clientX - this.nodeOffsetX;
-          this.stopWatch = true;
           this.currentMindMap.nodes[node].position_y = event.clientY - this.nodeOffsetY;
         }
       },
@@ -347,7 +345,6 @@
         if (index != -1) {
           node = this.currentMindMap.nodes[index]
           http.put(`/nodes/${node.id}.json`, {node: node}).then((res) => {
-              this.stopWatch = true;
               this.currentMindMap.nodes.splice(index, 1, res.data.node);
           }).catch((error) => {
             console.log(error);
@@ -365,7 +362,6 @@
       },
       nodeUpdated(node) {
         this.nodeUpdatedFlag = true;
-        this.stopWatch = true;
         this.saveNode(node);
       },
       deleteSelectedNode() {
@@ -382,11 +378,13 @@
           console.log(error);
         })
       },
+      deletAllNodes(nodes) {
+        http.put('/mindmaps/destroy_nodes.json', {nodes: nodes})
+      },
       // =============== Node CRUD OPERATIONS =====================
 
       // =============== Map CRUD OPERATIONS =====================
-      saveCurrentMap(restore=false) {
-        console.log("Came here");
+      saveCurrentMap() {
         if (this.currentMindMap.id) {
           http.put(`/mindmaps/${this.currentMindMap.id}.json`, {mindmap: this.currentMindMap}).then((res) => {
             this.stopWatch = true;
@@ -408,13 +406,11 @@
         }
       },
       resetMindmapap() {
+        this.selectedNode = null;
+        this.deletAllNodes(this.currentMindMap.nodes);
         this.stopWatch = true;
         this.currentMindMap.name = "Central Idea";
-        this.stopWatch = true;
-        this.currentMindMap.nodes = [];
-        this.selectedNode = null;
-
-        this.saveCurrentMap(true);
+        setTimeout(this.saveCurrentMap, 500)
         this.$refs.resetMapModal.close();
       },
       // =============== Map CRUD OPERATIONS =====================
@@ -496,7 +492,7 @@
   }
   .buttons_area {
     position: absolute;
-    left: 83%;
+    left: 80%;
     top: 15px;
   }
   .center {

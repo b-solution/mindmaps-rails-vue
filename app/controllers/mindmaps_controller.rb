@@ -33,6 +33,17 @@ class MindmapsController < ApplicationController
     end
   end
 
+  def destroy_nodes
+    nodes = params[:nodes]
+    nodes.each do |nod| 
+      Node.find(nod[:id]).destroy
+    end if nodes.present?
+    respond_to do |format|
+      format.json { render json: {success: true}}
+      format.html { }
+    end
+  end
+
   private
 
   def set_mindmap

@@ -19,8 +19,8 @@ class NodesController < ApplicationController
   end
 
   def destroy
-    delete_child_nodes Node.where(parent_node: @node.id)
     if @node.destroy
+      delete_child_nodes Node.where(parent_node: @node.id)
       respond_to do |format|
         format.json { render json: {success: true}}
         format.html { }
