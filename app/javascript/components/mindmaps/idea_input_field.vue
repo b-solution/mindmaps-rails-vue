@@ -1,7 +1,7 @@
 <template>
   <div @mousedown="startDragIdea" class="">
     <span @mousedown="startDrag" class="start_dot"></span>
-    <input type="text" ref="new_idea" @input="updateIdea" v-model="tempLocalValue" class="new_idea"/>
+    <input type="text" ref="new_idea" @input="updateIdea" v-model="tempLocalValue" class="new_idea" :class="{'red_border': isSelected}"/>
   </div>
 </template>
 
@@ -9,7 +9,7 @@
   import _ from 'lodash';
 
   export default {
-    props: ['value'],
+    props: ['value', 'isSelected'],
     data() {
       return {
         localValue: this.value,
@@ -34,6 +34,7 @@
     watch: {
       localValue() {
         this.$emit("input", this.localValue)
+        this.$emit("node-updated");
       }
     }
   }
@@ -41,6 +42,9 @@
 </script>
 
 <style scoped lang="scss">
+  .red_border {
+    border: 1px solid red !important;
+  }
   .new_idea {
     text-align: center;
     padding: 5% 5%;

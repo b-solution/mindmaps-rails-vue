@@ -6,16 +6,22 @@
         <input type="text" ref="central_idea" @input="updateCentralIdea" v-model="centralIdea" class="central_idea"/>
       </div>
       <input-field 
-        @mousedown-event="startDragNode($event, node)" 
         v-for="node in currentMindMap.nodes" 
-        :key="`${node.position_x}.${node.position_y}`" 
         v-model="node.title" 
-        @start-drag="startDrag($event, node)" 
+        :key="`${node.id}`" 
         :style="getNodeStyle(node)" 
-        class="pos_abs input_field"></input-field>
+        :is-selected="C_selectedNodeId === node.id"
+        @start-drag="startDrag($event, node)" 
+        @mousedown-event="startDragNode($event, node)" 
+        @node-updated="nodeUpdated(node)"
+        class="pos_abs input_field">
+        </input-field>
       <canvas id="map-canvas" :width="windowWidth" :height="windowHeight"></canvas>
     </section>
     <div class="buttons_area">
+      <span>
+        <button @click.stop="deleteSelectedNode" :disabled="!selectedNode" class="options_button">Delete</button>
+      </span>
       <span>
         <button @click.stop="$refs.newMapModal.open" class="options_button">New</button>
         <button @click.stop="$refs.openMapModal.open" class="options_button">Open</button>
@@ -145,7 +151,8 @@
         windowWidth: window.innerWidth,
         windowHeight: window.innerHeight,
         stopWatch: false,
-        openMindMapKey: ''
+        openMindMapKey: '',
+        nodeUpdatedFlag: false
       }
     },
     computed: {
@@ -154,6 +161,9 @@
           left: (Math.floor(this.windowWidth/2) - 150) +'px', 
           top: (Math.floor(this.windowHeight/2) - 50) +'px'
         }
+      },
+      C_selectedNodeId() {
+        return this.selectedNode ? this.selectedNode.id : 0;
       }
     },
     methods: {
@@ -190,7 +200,6 @@
         })
       },
       startDrag(event, p_node=null) {
-        console.log("start Drag");
         if (p_node) {
           this.nodeParent = p_node;
         }
@@ -214,7 +223,6 @@
         if (this.dragging) {
           this.dragging = false;
           this.draggingNode = false;
-          console.log("stopped new node");
 
           // To prevent adding new input box if user clicks on red circle.
           this.removeLines();
@@ -232,22 +240,21 @@
             position_y: this.currentPositionY,
             parent_node: this.nodeParent ? this.nodeParent.id : 0
           }
-          this.currentMindMap.nodes.push(node);
+          this.selectedNode = null;
+          this.createNode(node);
+          // this.currentMindMap.nodes.push(node);
           this.currentPositionX = this.currentPositionY = 0;
           this.nodeParent = null;
         } 
         if (this.draggingNode) {
           this.dragging = false;
           this.draggingNode = false;
-          this.saveCurrentMap()
-          this.selectedNode = null;
-          console.log("stoped old node");
+          this.saveNode(this.selectedNode);
           this.removeLines();
         }
       },
       doDrag(event) {
         if (this.dragging) {
-          console.log("dragging new node");
           this.currentPositionX = event.clientX ;
           this.currentPositionY = event.clientY ;
 
@@ -262,7 +269,7 @@
           ctx.lineTo(this.currentPositionX, this.currentPositionY);
           ctx.stroke();
         } else if (this.draggingNode) {
-          console.log("dragging old node");
+          this.nodeUpdatedFlag = true;
           let node = this.currentMindMap.nodes.findIndex((nod) => nod.id == this.selectedNode.id);
           this.stopWatch = true;
           this.currentMindMap.nodes[node].position_x = event.clientX - this.nodeOffsetX;
@@ -280,12 +287,38 @@
       openNewMapNewWindow() {
         window.open(window.location.origin+'/mindmaps/new')
       },
+      saveNode(node) {
+        if (this.nodeUpdatedFlag == false) { return; }
+        if (!node || !node.id) { console.log("Unable to update node"); return; }
+
+        this.nodeUpdatedFlag = false;
+        let index = this.currentMindMap.nodes.findIndex((nod) => nod.id == node.id);
+        if (index != -1) {
+          node = this.currentMindMap.nodes[index]
+          http.put(`/nodes/${node.id}.json`, {node: node}).then((res) => {
+              this.stopWatch = true;
+              this.currentMindMap.nodes.splice(index, 1, res.data.node);
+          }).catch((error) => {
+            console.log(error);
+          })
+        }
+      },
+      createNode(node) {
+        node['mindmap_id'] = this.currentMindMap.id;
+        http.post('/nodes.json', {node: node}).then((res) => {
+          this.getMindmap(this.currentMindMap.id);
+          this.selectedNode = res.data.node;
+        }).catch((error) => {
+          console.log(error);
+        })
+      },
       saveCurrentMap(restore=false) {
         if (this.currentMindMap.nodes.length == 0 && restore == false) { return; }
         if (this.currentMindMap.id) {
           http.put(`/mindmaps/${this.currentMindMap.id}.json`, {mindmap: this.currentMindMap}).then((res) => {
             this.stopWatch = true;
             this.currentMindMap = res.data.mindmap;
+            this.selectedNode = null;
             this.updateQuery();
           }).catch((error) => {
             console.log(error)
@@ -294,6 +327,7 @@
           http.post(`/mindmaps.json`, {mindmap: this.currentMindMap}).then((res) => {
             this.stopWatch = true;
             this.currentMindMap = res.data.mindmap;
+            this.selectedNode = null;
             this.updateQuery();
           }).catch((error) => {
             console.log(error)
@@ -305,6 +339,7 @@
         this.currentMindMap.name = "Central Idea";
         this.stopWatch = true;
         this.currentMindMap.nodes = [];
+        this.selectedNode = null;
 
         this.saveCurrentMap(true);
         this.$refs.resetMapModal.close();
@@ -313,6 +348,19 @@
         let query = {};
         query['key'] = this.currentMindMap.id;
         this.$router.push({query: query});
+      },
+      updateCentralIdea: _.debounce(
+        function(input) {
+          this.currentMindMap.name = this.$refs.central_idea.value;
+        },
+        500
+      ),
+      startDragNode(event, node) {
+        this.selectedNode = node;
+        this.nodeOffsetX = event.clientX - node.position_x;
+        this.nodeOffsetY = event.clientY - node.position_y;
+        this.draggingNode = true;
+        this.currentPositionX = this.currentPositionY = 0;
       },
       drawLines(retry_count=0) {
         return;
@@ -337,25 +385,30 @@
           setTimeout(this.drawLines(retry_count++), 100); 
         }
       },
-      updateCentralIdea: _.debounce(
-        function(input) {
-          this.currentMindMap.name = this.$refs.central_idea.value;
-        },
-        500
-      ),
-      startDragNode(event, node) {
-        console.log("started node drag");
-        this.selectedNode = node;
-        this.nodeOffsetX = event.clientX - node.position_x;
-        this.nodeOffsetY = event.clientY - node.position_y;
-        this.draggingNode = true;
-        this.currentPositionX = this.currentPositionY = 0;
-      },
       removeLines() {
         document.querySelectorAll("CANVAS").forEach((canvas) => {
           if(canvas.id != "map-canvas") {
             canvas.parentNode.removeChild(canvas)
           }
+        })
+      },
+      nodeUpdated(node) {
+        this.nodeUpdatedFlag = true;
+        this.stopWatch = true;
+        this.saveNode(node);
+      },
+      deleteSelectedNode() {
+        if (!this.selectedNode || !this.selectedNode.id) { return; }
+
+        http.delete(`/nodes/${this.selectedNode.id}.json`).then((res) => {
+          if (res.data.success) {
+            this.selectedNode = null;
+            this.getMindmap(this.currentMindMap.id);
+          } else {
+            console.log("Unable to delete node");
+          }
+        }).catch((error) => {
+          console.log(error);
         })
       }
     },
@@ -368,7 +421,7 @@
       window.addEventListener('mouseup', this.stopDrag);
     },
     watch: {
-      currentMindMap: {
+      "currentMindMap.name": {
         handler: function(new_map) {
           this.centralIdea = this.currentMindMap.name;
           this.removeLines();
@@ -387,6 +440,7 @@
           //   ctx.stroke();
           //   ctx.closePath();
           // })
+          console.log("Came here");
           if (this.stopWatch) { 
             this.stopWatch = false;
             return; 
