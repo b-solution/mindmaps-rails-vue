@@ -19,15 +19,30 @@ class NodesController < ApplicationController
   end
 
   def destroy
-    debugger
-    @node.destroy
-    respond_to do |format|
-      format.json { render json: {success: true}}
-      format.html { }
+    delete_child_nodes Node.where(parent_node: @node.id)
+    if @node.destroy
+      respond_to do |format|
+        format.json { render json: {success: true}}
+        format.html { }
+      end
+    else
+      respond_to do |format|
+        format.json { render json: {success: false}}
+        format.html { }
+      end
     end
   end
 
   private
+
+  def delete_child_nodes nodes
+    return if nodes.length == 0
+
+    nodes.each do |nod|
+      delete_child_nodes Node.where(parent_node: nod.id)
+      nod.destroy
+    end
+  end
 
   def set_node
     @node = Node.find_by_id(params[:id])

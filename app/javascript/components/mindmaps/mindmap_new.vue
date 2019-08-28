@@ -167,6 +167,7 @@
       }
     },
     methods: {
+      // =============== GETTING MAP =====================
       getMindmap(id) {
         http.get(`/mindmaps/${id}.json`).then((res) => {
           this.stopWatch = true;
@@ -180,13 +181,6 @@
           console.log(error);
         })
       },
-      openPreviousMap() {
-        this.getMindmap(this.openMindMapKey);
-      },
-      closeOpenMapModal() {
-        this.openMindMapKey = '';
-        this.$refs.openMapModal.close();
-      },
       getNewMindmap() {
         http.get('/mindmaps/new.json').then((res) => {
           this.currentMindMap = res.data.mindmap;
@@ -199,6 +193,26 @@
           this.loading = false;
         })
       },
+      // =============== GETTING MAP =====================
+
+      // =============== MODALS OPEN/CLOSE/OPERATIONS =====================
+      closeOpenMapModal() {
+        this.openMindMapKey = '';
+        this.$refs.openMapModal.close();
+      },
+      openPreviousMap() {
+        this.getMindmap(this.openMindMapKey);
+      },
+      openNewMapNewWindow() {
+        window.open(window.location.origin+'/mindmaps/new')
+      },
+      openNewMap() {
+        this.getNewMindmap();
+        this.$refs.newMapModal.close()
+      },
+      // =============== MODALS OPEN/CLOSE/OPERATIONS =====================
+
+      // =============== DRAGGING OPERATIONS =====================
       startDrag(event, p_node=null) {
         if (p_node) {
           this.nodeParent = p_node;
@@ -218,6 +232,37 @@
           c.height = this.windowHeight;
         }
         this.currentPositionX = this.currentPositionY = 0;
+      },
+      startDragNode(event, node) {
+        this.selectedNode = node;
+        this.nodeOffsetX = event.clientX - node.position_x;
+        this.nodeOffsetY = event.clientY - node.position_y;
+        this.draggingNode = true;
+        this.currentPositionX = this.currentPositionY = 0;
+      },
+      doDrag(event) {
+        if (this.dragging) {
+          this.currentPositionX = event.clientX ;
+          this.currentPositionY = event.clientY ;
+
+          var c = document.getElementById(this.parent_x + "")
+          var ctx = c.getContext("2d");
+          ctx.clearRect(0, 0, c.width, c.height)
+          ctx.beginPath();
+
+          ctx.lineWidth = "2";
+          ctx.strokeStyle = "red";
+          ctx.moveTo(this.parent_x, this.parent_y);
+          ctx.lineTo(this.currentPositionX, this.currentPositionY);
+          ctx.stroke();
+        } else if (this.draggingNode) {
+          this.nodeUpdatedFlag = true;
+          let node = this.currentMindMap.nodes.findIndex((nod) => nod.id == this.selectedNode.id);
+          this.stopWatch = true;
+          this.currentMindMap.nodes[node].position_x = event.clientX - this.nodeOffsetX;
+          this.stopWatch = true;
+          this.currentMindMap.nodes[node].position_y = event.clientY - this.nodeOffsetY;
+        }
       },
       stopDrag(event) {
         if (this.dragging) {
@@ -253,114 +298,11 @@
           this.removeLines();
         }
       },
-      doDrag(event) {
-        if (this.dragging) {
-          this.currentPositionX = event.clientX ;
-          this.currentPositionY = event.clientY ;
+      // =============== DRAGGING OPERATIONS =====================
 
-          var c = document.getElementById(this.parent_x + "")
-          var ctx = c.getContext("2d");
-          ctx.clearRect(0, 0, c.width, c.height)
-          ctx.beginPath();
-
-          ctx.lineWidth = "2";
-          ctx.strokeStyle = "red";
-          ctx.moveTo(this.parent_x, this.parent_y);
-          ctx.lineTo(this.currentPositionX, this.currentPositionY);
-          ctx.stroke();
-        } else if (this.draggingNode) {
-          this.nodeUpdatedFlag = true;
-          let node = this.currentMindMap.nodes.findIndex((nod) => nod.id == this.selectedNode.id);
-          this.stopWatch = true;
-          this.currentMindMap.nodes[node].position_x = event.clientX - this.nodeOffsetX;
-          this.stopWatch = true;
-          this.currentMindMap.nodes[node].position_y = event.clientY - this.nodeOffsetY;
-        }
-      },
+      // =============== STYLING OPERATIONS =====================
       getNodeStyle(node) {
         return {left: node.position_x +'px', top: node.position_y +'px'}
-      },
-      openNewMap() {
-        this.getNewMindmap();
-        this.$refs.newMapModal.close()
-      },
-      openNewMapNewWindow() {
-        window.open(window.location.origin+'/mindmaps/new')
-      },
-      saveNode(node) {
-        if (this.nodeUpdatedFlag == false) { return; }
-        if (!node || !node.id) { console.log("Unable to update node"); return; }
-
-        this.nodeUpdatedFlag = false;
-        let index = this.currentMindMap.nodes.findIndex((nod) => nod.id == node.id);
-        if (index != -1) {
-          node = this.currentMindMap.nodes[index]
-          http.put(`/nodes/${node.id}.json`, {node: node}).then((res) => {
-              this.stopWatch = true;
-              this.currentMindMap.nodes.splice(index, 1, res.data.node);
-          }).catch((error) => {
-            console.log(error);
-          })
-        }
-      },
-      createNode(node) {
-        node['mindmap_id'] = this.currentMindMap.id;
-        http.post('/nodes.json', {node: node}).then((res) => {
-          this.getMindmap(this.currentMindMap.id);
-          this.selectedNode = res.data.node;
-        }).catch((error) => {
-          console.log(error);
-        })
-      },
-      saveCurrentMap(restore=false) {
-        if (this.currentMindMap.nodes.length == 0 && restore == false) { return; }
-        if (this.currentMindMap.id) {
-          http.put(`/mindmaps/${this.currentMindMap.id}.json`, {mindmap: this.currentMindMap}).then((res) => {
-            this.stopWatch = true;
-            this.currentMindMap = res.data.mindmap;
-            this.selectedNode = null;
-            this.updateQuery();
-          }).catch((error) => {
-            console.log(error)
-          })
-        } else {
-          http.post(`/mindmaps.json`, {mindmap: this.currentMindMap}).then((res) => {
-            this.stopWatch = true;
-            this.currentMindMap = res.data.mindmap;
-            this.selectedNode = null;
-            this.updateQuery();
-          }).catch((error) => {
-            console.log(error)
-          })
-        }
-      },
-      resetMindmapap() {
-        this.stopWatch = true;
-        this.currentMindMap.name = "Central Idea";
-        this.stopWatch = true;
-        this.currentMindMap.nodes = [];
-        this.selectedNode = null;
-
-        this.saveCurrentMap(true);
-        this.$refs.resetMapModal.close();
-      },
-      updateQuery() {
-        let query = {};
-        query['key'] = this.currentMindMap.id;
-        this.$router.push({query: query});
-      },
-      updateCentralIdea: _.debounce(
-        function(input) {
-          this.currentMindMap.name = this.$refs.central_idea.value;
-        },
-        500
-      ),
-      startDragNode(event, node) {
-        this.selectedNode = node;
-        this.nodeOffsetX = event.clientX - node.position_x;
-        this.nodeOffsetY = event.clientY - node.position_y;
-        this.draggingNode = true;
-        this.currentPositionX = this.currentPositionY = 0;
       },
       drawLines(retry_count=0) {
         return;
@@ -392,6 +334,35 @@
           }
         })
       },
+      // =============== STYLING OPERATIONS =====================
+
+
+      // =============== Node CRUD OPERATIONS =====================
+      saveNode(node) {
+        if (this.nodeUpdatedFlag == false) { return; }
+        if (!node || !node.id) { console.log("Unable to update node"); return; }
+
+        this.nodeUpdatedFlag = false;
+        let index = this.currentMindMap.nodes.findIndex((nod) => nod.id == node.id);
+        if (index != -1) {
+          node = this.currentMindMap.nodes[index]
+          http.put(`/nodes/${node.id}.json`, {node: node}).then((res) => {
+              this.stopWatch = true;
+              this.currentMindMap.nodes.splice(index, 1, res.data.node);
+          }).catch((error) => {
+            console.log(error);
+          })
+        }
+      },
+      createNode(node) {
+        node['mindmap_id'] = this.currentMindMap.id;
+        http.post('/nodes.json', {node: node}).then((res) => {
+          this.getMindmap(this.currentMindMap.id);
+          this.selectedNode = res.data.node;
+        }).catch((error) => {
+          console.log(error);
+        })
+      },
       nodeUpdated(node) {
         this.nodeUpdatedFlag = true;
         this.stopWatch = true;
@@ -410,7 +381,57 @@
         }).catch((error) => {
           console.log(error);
         })
-      }
+      },
+      // =============== Node CRUD OPERATIONS =====================
+
+      // =============== Map CRUD OPERATIONS =====================
+      saveCurrentMap(restore=false) {
+        console.log("Came here");
+        if (this.currentMindMap.id) {
+          http.put(`/mindmaps/${this.currentMindMap.id}.json`, {mindmap: this.currentMindMap}).then((res) => {
+            this.stopWatch = true;
+            this.currentMindMap = res.data.mindmap;
+            this.selectedNode = null;
+            this.updateQuery();
+          }).catch((error) => {
+            console.log(error)
+          })
+        } else {
+          http.post(`/mindmaps.json`, {mindmap: this.currentMindMap}).then((res) => {
+            this.stopWatch = true;
+            this.currentMindMap = res.data.mindmap;
+            this.selectedNode = null;
+            this.updateQuery();
+          }).catch((error) => {
+            console.log(error)
+          })
+        }
+      },
+      resetMindmapap() {
+        this.stopWatch = true;
+        this.currentMindMap.name = "Central Idea";
+        this.stopWatch = true;
+        this.currentMindMap.nodes = [];
+        this.selectedNode = null;
+
+        this.saveCurrentMap(true);
+        this.$refs.resetMapModal.close();
+      },
+      // =============== Map CRUD OPERATIONS =====================
+
+      // =============== OTHERS =====================
+      updateQuery() {
+        let query = {};
+        query['key'] = this.currentMindMap.id;
+        this.$router.push({query: query});
+      },
+      updateCentralIdea: _.debounce(
+        function(input) {
+          this.currentMindMap.name = this.$refs.central_idea.value;
+        },
+        500
+      ),
+      // =============== OTHERS =====================
     },
     mounted() {
       if (this.$route.query.key) {
@@ -440,7 +461,6 @@
           //   ctx.stroke();
           //   ctx.closePath();
           // })
-          console.log("Came here");
           if (this.stopWatch) { 
             this.stopWatch = false;
             return; 

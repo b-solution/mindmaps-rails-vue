@@ -12,15 +12,6 @@ class MindmapsController < ApplicationController
 
   def create
     @mindmap = Mindmap.create(mindmap_params)
-    @mindmap.nodes.destroy_all
-    params['mindmap']['nodes'].each do |nod|
-      @mindmap.nodes << Node.create(
-                                    title: nod[:title], 
-                                    position_x: nod[:position_x], 
-                                    position_y: nod[:position_y],
-                                    parent_node: nod[:parent_node]
-                                  )
-    end if params['mindmap']['nodes'].present?
     respond_to do |format|
       format.json { render json: {mindmap: mindmap_as_json(@mindmap)}}
       format.html { }
@@ -29,15 +20,6 @@ class MindmapsController < ApplicationController
 
   def update
     @mindmap.update(mindmap_params)
-    @mindmap.nodes.destroy_all
-    params['mindmap']['nodes'].each do |nod|
-      @mindmap.nodes << Node.create(
-                                    title: nod[:title], 
-                                    position_x: nod[:position_x], 
-                                    position_y: nod[:position_y],
-                                    parent_node: nod[:parent_node]
-                                  )
-    end if params['mindmap']['nodes'].present?
     respond_to do |format|
       format.json { render json: {mindmap: mindmap_as_json(@mindmap)}}
       format.html { }
