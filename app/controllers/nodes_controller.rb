@@ -4,6 +4,7 @@ class NodesController < ApplicationController
 
   def create
     @node = Node.create(node_params)
+    ActionCable.server.broadcast "web_notifications_channel#{@node.mindmap_id}", message: "This is Message"
     respond_to do |format|
       format.json { render json: {node: @node}}
       format.html { }
@@ -12,6 +13,7 @@ class NodesController < ApplicationController
 
   def update
     @node.update(node_params)
+    ActionCable.server.broadcast "web_notifications_channel#{@node.mindmap_id}", message: "This is Message"
     respond_to do |format|
       format.json { render json: {node: @node}}
       format.html { }
@@ -21,6 +23,7 @@ class NodesController < ApplicationController
   def destroy
     if @node.destroy
       delete_child_nodes Node.where(parent_node: @node.id)
+      ActionCable.server.broadcast "web_notifications_channel#{@node.mindmap_id}", message: "This is Message"
       respond_to do |format|
         format.json { render json: {success: true}}
         format.html { }

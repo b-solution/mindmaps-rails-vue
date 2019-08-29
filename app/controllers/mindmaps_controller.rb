@@ -20,6 +20,7 @@ class MindmapsController < ApplicationController
 
   def update
     @mindmap.update(mindmap_params)
+    ActionCable.server.broadcast "web_notifications_channel#{@mindmap.id}", message: "This is Message"
     respond_to do |format|
       format.json { render json: {mindmap: mindmap_as_json(@mindmap)}}
       format.html { }

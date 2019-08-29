@@ -4,4 +4,5 @@ Rails.application.routes.draw do
   resources :mindmaps
 
   resources :nodes
+  mount ActionCable.server => '/cable'
 end

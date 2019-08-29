@@ -155,6 +155,13 @@
         nodeUpdatedFlag: false
       }
     },
+    channels: {
+      WebNotificationsChannel: {
+        received(data) {
+          this.getMindmap(this.currentMindMap.id);
+        },
+      }
+    },
     computed: {
       C_centeralNodePosition() {
         return {
@@ -438,6 +445,11 @@
       window.addEventListener('mouseup', this.stopDrag);
     },
     watch: {
+      "currentMindMap.id"() {
+        if (this.currentMindMap.id) {
+          this.$cable.subscribe({ channel: 'WebNotificationsChannel', room: this.currentMindMap.id});
+        }
+      },
       "currentMindMap.name": {
         handler: function(new_map) {
           this.centralIdea = this.currentMindMap.name;
